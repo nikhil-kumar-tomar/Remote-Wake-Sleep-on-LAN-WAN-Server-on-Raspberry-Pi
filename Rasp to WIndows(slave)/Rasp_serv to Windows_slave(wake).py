@@ -32,10 +32,9 @@ def ping_args():
 
 def data():
     pd.options.display.max_rows = 50000
-    df = pd.read_csv("/home/nick/Desktop/SSH For Linux/Rasp to WIndows(slave)/Server_Information.csv")
-    for x in range(len(df)):
-        ip_list.append(df.loc[x][0])
-        mac_list.append(df.loc[x][2])
+    df = pd.read_csv("/home/pi/SSH For Linux/Rasp to WIndows(slave)/Server_Information.csv")
+    mac_list.extend(df['Mac_Address'].tolist())
+    ip_list.extend(df["IP_Address"].tolist())
 
 def ssh():
     p = subprocess.Popen(f'wakeonlan {mac_list[x]}',shell=True)
