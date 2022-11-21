@@ -3,10 +3,10 @@ import sys
 import subprocess
 import time
 import pandas as pd
+import os
 
-# Function creating for ping
-ip_list = []
-mac_list = []
+filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Server_Information.csv")
+df = pd.read_csv(filename)
 arguments=[]
 
 def args():
@@ -16,77 +16,70 @@ def args():
         arguments.append(int(args[len_args]))
 
 # p.poll() = 0 means servers are Up and running
-# p.poll() = 1 means servers are Down and must be wake up.
+# p.poll() = 1 or any other value means servers are Down and must be wake up.
 #outage =1 is up
 #outage =0 is down
 
-def ping_args():
+def ping_args(ip_address):
     global outage
-    p = subprocess.Popen(f"ping -c 15 -s 52 {ip_list[x]}",shell=True,stdout=subprocess.PIPE)
+    p = subprocess.Popen(
+        f"ping -c 15 -s 52 {ip_address}", shell=True, stdout=subprocess.PIPE)
     p.wait()
-    if p.poll()==0:
-        outage=1
+    if p.poll() == 0:
+        outage = 1
     else:
-        outage=0
+        outage = 0
 
 
-def data():
-    pd.options.display.max_rows = 50000
-    df = pd.read_csv("/home/pi/SSH For Linux/Rasp to WIndows(slave)/Server_Information.csv")
-    mac_list.extend(df['Mac_Address'].tolist())
-    ip_list.extend(df["IP_Address"].tolist())
-
-def ssh():
-    p = subprocess.Popen(f'wakeonlan {mac_list[x]}',shell=True)
+def ssh(mac_address):
+    p = subprocess.Popen(f'wakeonlan {mac_address}',shell=True)
     
-data()
 args()
-len_list = len(ip_list)
 if len(arguments) != 0:
-    for x in range(len_list):
-        for l in arguments:
-            if int(x) == int(l):
-                attempt = 0
-                # while Something to make script ping one address and if its down ping it again
-                print(f"Pinging {ip_list[x]}")
-                ping_args()
-                if outage == 1:
-                    print(f"{ip_list[x]} is UP")
-
-                while outage == 0:
-                    print(f"{ip_list[x]} is DOWN")
-                    print(f"Trying to Wake Up {ip_list[x]}")
-                    ssh()
-                    print(
-                        f"waiting 15 seconds before Pinging {ip_list[x]} again\n")
-                    time.sleep(15)
-                    ping_args()
-                    attempt += 1
-                    if attempt == 5:
-                        print(f"\n{ip_list[x]} not Waking UP, Skipping\n")
-                        break
-                    elif outage==1:
-                        print(f"{ip_list[x]} is UP")
-if len(arguments) == 0:
-    print("No Arguments were given, Waking all the available Servers")
-    for x in range(len_list):
+    for l in arguments:
+        ip_address=df["IP_Address"][l]
+        mac_address=df["Mac_Address"][l]
         attempt = 0
-        # while Something to make script ping one address and if its down ping it again
-        print(f"Pinging {ip_list[x]}")
-        ping_args()
+        print(f"Pinging {ip_address}")
+        ping_args(ip_address)
         if outage == 1:
-            print(f"{ip_list[x]} is UP")
+            print(f"{ip_address} is UP")
 
         while outage == 0:
-            print(f"{ip_list[x]} is DOWN")
-            print(f"Trying to Wake Up {ip_list[x]}")
-            ssh()
-            print(f"waiting 15 seconds before Pinging {ip_list[x]} again\n")
+            print(f"{ip_address} is DOWN")
+            print(f"Trying to Wake Up {ip_address}")
+            ssh(mac_address)
+            print(f"waiting 15 seconds before Pinging {ip_address} again\n")
             time.sleep(15)
-            ping_args()
-            attempt += 1
+            ping_args(ip_address)
             if attempt == 5:
-                print(f"\n{ip_list[x]} not Waking UP, Skipping\n")
+                print(f"\n{ip_address} not Waking UP, Skipping\n")
                 break
             elif outage==1:
-                print(f"{ip_list[x]} is UP")
+                print(f"{ip_address} is UP")
+            attempt += 1
+
+elif len(arguments) == 0:
+    print("No Arguments were given, Waking all the available Servers")
+    for x in range(len(df)):
+        ip_address=df["IP_Address"][x]
+        mac_address=df["Mac_Address"][x]
+        attempt = 0
+        print(f"Pinging {ip_address}")
+        ping_args(ip_address)
+        if outage == 1:
+            print(f"{ip_address} is UP")
+
+        while outage == 0:
+            print(f"{ip_address} is DOWN")
+            print(f"Trying to Wake Up {ip_address}")
+            ssh(mac_address)
+            print(f"waiting 15 seconds before Pinging {ip_address} again\n")
+            time.sleep(15)
+            ping_args(ip_address)
+            if attempt == 5:
+                print(f"\n{ip_address} not Waking UP, Skipping\n")
+                break
+            elif outage==1:
+                print(f"{ip_address} is UP")
+            attempt += 1
